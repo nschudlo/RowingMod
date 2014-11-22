@@ -1,0 +1,21 @@
+[
+{
+  "modid": "RowingMod",
+  "name": "Rowing Mod",
+  "description": "Mod",
+  "version": "1.0",
+  "mcversion": "1.7.10",
+  "url": "",
+  "updateUrl": "",
+  "authorList": [
+    "republic"
+  ],
+  "credits": "",
+  "logoFile": "",
+  "screenshots": [
+  ],
+  "parent":"",
+  "dependencies": [
+  ]
+}
+]
