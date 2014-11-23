@@ -37,8 +37,9 @@ public class EntityCamera extends EntityLivingBase
 
     int currentView=0;
 
-    int countdown;
     boolean pressing;
+    boolean toggleFreemode = false;
+    boolean toggleFreemodePressed = false;
 
     public EntityCamera(World world)
     {
@@ -52,10 +53,8 @@ public class EntityCamera extends EntityLivingBase
     {
         this(world);
         boat = d;
-        //setPosition(d.posX, d.posY, d.posZ);
         minecraft = Minecraft.getMinecraft();
         prevView=minecraft.gameSettings.thirdPersonView;
-        countdown = 0;
 
         togglePerspectiveOriginal = minecraft.gameSettings.keyBindTogglePerspective.getKeyCode();
         original = minecraft.gameSettings.keyBindTogglePerspective;
@@ -79,7 +78,7 @@ public class EntityCamera extends EntityLivingBase
         //Set keybind back to normal
         LogHelper.info("Switching Back");
         minecraft.gameSettings.keyBindTogglePerspective = original;
-        Keybindings.boatperspective.setKeyCode(original.getKeyCode());
+        // Keybindings.boatperspective.setKeyCode(original.getKeyCode()); //Seems to cause problems when set to the same
         KeyBinding.unPressAllKeys();
     }
 
@@ -98,12 +97,12 @@ public class EntityCamera extends EntityLivingBase
 
     private void cycleView()
     {
-        if(++currentView==3)
+        if(++currentView==7)
             currentView=0;
 
         if(currentView==0)
         {
-            boat.riddenByEntity.rotationPitch=0;
+            boat.riddenByEntity.rotationPitch=20;
         }
         else
         if(currentView==1)
@@ -146,19 +145,6 @@ public class EntityCamera extends EntityLivingBase
 
 
 
-       /* if(prevView != minecraft.gameSettings.thirdPersonView || countdown != 0)
-        {
-            //If countdown is set to 2 or more this will run again
-           // if(countdown == 0)
-                countdown=20;
-
-            setPosition(prev[0],prev[1],prev[2]);
-            setRotation(prev[3]+160,prev[4]-30);
-            prevView = minecraft.gameSettings.thirdPersonView;
-            countdown--;
-        }
-        else*/
-       {
         prev[0] = (float)posX;
         prev[1] = (float)posY;
         prev[2] = (float)posZ;
@@ -168,7 +154,7 @@ public class EntityCamera extends EntityLivingBase
         prevPosX = posX;
         prevPosY = posY;
         prevPosZ = posZ;
-    }
+
 
         int radius = 5;
 
@@ -180,13 +166,13 @@ public class EntityCamera extends EntityLivingBase
         }
         else
         {
-            //Check if toggle key is being pressed. Need to release to press again
+            //Check if toggle perspective key is being pressed. Need to release to press again
             if(Keyboard.isKeyDown(original.getKeyCode()))
             {
                 if(!pressing)
                 {
                     pressing = true;
-                    LogHelper.info("Toggle Perspective Pressed " + Keyboard.getKeyName(original.getKeyCode()));
+                    LogHelper.info("Toggle Perspective Pressed. Current view: " + Keyboard.getKeyName(original.getKeyCode()));
                     cycleView();
                 }
             }
@@ -194,44 +180,38 @@ public class EntityCamera extends EntityLivingBase
                 pressing = false;
 
 
-            if (!Keyboard.isKeyDown(minecraft.gameSettings.keyBindBack.getKeyCode()))
+            if (Keyboard.isKeyDown(minecraft.gameSettings.keyBindBack.getKeyCode()))
             {
-                if (currentView == 1)//Behind
+                if(!toggleFreemodePressed) {
+                    toggleFreemodePressed = true;
+
+                    toggleFreemode = !toggleFreemode;
+                }
+            }
+            else
+                toggleFreemodePressed=false;
+
+            if(!toggleFreemode)
+            {
+                switch(currentView)
                 {
-                    goalZ = (float) (boat.posZ + radius * Math.cos(Math.toRadians(boat.getFacingDirection() - 180)));
-                    goalX = (float) (boat.posX + radius * Math.sin(Math.toRadians(boat.getFacingDirection() - 180)));
-                    goalY = (float) boat.posY + 0.5f;
+                    case 1: setGoals(radius, 180, 0.5f, 90, 15f); break;
+                    case 2: setGoals(radius, 0, 0.5f, -90, 15); break;
+                    case 3: setGoals(radius, 270, -0.5f, 0, -15); break;
+                    case 4: setGoals(radius, 90, -0.5f, 180, -15); break;
+                    case 5: setGoals(-1,0,-0.5f,-100,-15);break;
+                    case 6: setGoals(2,180,-1f,100,-20);break;
 
-                    goalYaw = boat.rotationYaw + 90;
-                    goalPitch = boat.rotationPitch + 15F;
-
-                } else if (currentView == 2)//In Front
-                {
-                    goalZ = (float) (boat.posZ + radius * Math.cos(Math.toRadians(boat.getFacingDirection())));
-                    goalX = (float) (boat.posX + radius * Math.sin(Math.toRadians(boat.getFacingDirection())));
-                    goalY = (float) boat.posY + 0.5f;
-
-                    goalYaw = boat.rotationYaw - 90;
-                    goalPitch = boat.rotationPitch + 15F;
-                } else//First Person
-                {
-                    goalZ = (float) (boat.riddenByEntity.posZ + 4.4f * Math.cos(Math.toRadians(boat.getFacingDirection())));
-                    goalX = (float) (boat.riddenByEntity.posX + 4.4f * Math.sin(Math.toRadians(boat.getFacingDirection())));
-
-                    goalY = (float) boat.riddenByEntity.posY - boat.riddenByEntity.yOffset;
-
-                    goalYaw = boat.rotationYaw+90;
+                    default:
+                        setGoals(3,0,0,90,0);
+                        goalY = (float) boat.riddenByEntity.posY - boat.riddenByEntity.yOffset;
+                        goalPitch = 0;
 
 
-                    goalPitch = 0;//boat.riddenByEntity.rotationPitch;
-
-                    if(goalZ-0.1 < posZ && posZ< goalZ+0.1)
-                        if(goalY-0.2 < posY && posY < goalY+0.2) {
-                            if (goalX - 0.1 < posX && posX < goalX + 0.1) {
-                                minecraft.gameSettings.thirdPersonView=0;
-
-                            }
-                        }
+                        if(goalZ-0.5 < posZ && posZ< goalZ+0.5)
+                            if(goalY-0.2 < posY && posY < goalY+0.2)
+                                if (goalX - 0.5 < posX && posX < goalX + 0.5)
+                                    minecraft.gameSettings.thirdPersonView=0;
                 }
             }
             else
@@ -240,49 +220,52 @@ public class EntityCamera extends EntityLivingBase
                 goalY = (float) boat.riddenByEntity.posY - boat.riddenByEntity.yOffset;
                 goalZ = (float) boat.riddenByEntity.posZ;
 
-                goalYaw = boat.rotationYaw + 90;
+                goalYaw = boat.rotationYaw - 90;
                 goalPitch = boat.riddenByEntity.rotationPitch;
             }
         }
 
-        //if(currentView!=1)
-        {
-            int div = 8;
+
+        int div = 8;
 
 
-            if (this.posX < goalX - 0.01)
-                posX += (goalX - posX) / div;
-            else if (this.posX > goalX + 0.01)
-                posX -= (posX - goalX) / div;
+        if (this.posX < goalX - 0.01)
+            posX += (goalX - posX) / div;
+        else if (this.posX > goalX + 0.01)
+            posX -= (posX - goalX) / div;
 
-            if (this.posY < goalY - 0.2)
-                posY += (goalY - posY) / div;
-            else if (this.posY > goalY + 0.2)
-                posY -= (posY - goalY) / div;
+        if (this.posY < goalY - 0.2)
+            posY += (goalY - posY) / div;
+        else if (this.posY > goalY + 0.2)
+            posY -= (posY - goalY) / div;
 
-            if (this.posZ < goalZ - 0.01)
-                posZ += (goalZ - posZ) / div;
-            else if (this.posZ > goalZ + 0.01)
-                posZ -= (posZ - goalZ) / div;
+        if (this.posZ < goalZ - 0.01)
+            posZ += (goalZ - posZ) / div;
+        else if (this.posZ > goalZ + 0.01)
+            posZ -= (posZ - goalZ) / div;
 
 
-            if (this.rotationYaw < goalYaw - 0.01)
-                rotationYaw += ((goalYaw - rotationYaw) / div);
-            else if (this.rotationYaw > goalYaw + 0.01)
-                rotationYaw -= ((rotationYaw - goalYaw) / div);
+        if (this.rotationYaw < goalYaw - 0.01)
+            rotationYaw += ((goalYaw - rotationYaw) / div);
+        else if (this.rotationYaw > goalYaw + 0.01)
+            rotationYaw -= ((rotationYaw - goalYaw) / div);
 
-            if (this.rotationPitch < goalPitch - 0.01)
-                rotationPitch += (goalPitch - rotationPitch) / div;
-            else if (this.rotationPitch > goalPitch + 0.01)
-                rotationPitch -= (rotationPitch - goalPitch) / div;
+        if (this.rotationPitch < goalPitch - 0.01)
+            rotationPitch += (goalPitch - rotationPitch) / div;
+        else if (this.rotationPitch > goalPitch + 0.01)
+            rotationPitch -= (rotationPitch - goalPitch) / div;
 
-        }
-        //setPosition(goalX,goalY,goalZ);
-        //rotationYaw=goalYaw;
-        //rotationPitch=goalPitch;
 
-        //for(; rotationYaw - prevRotationYaw >= 180F; rotationYaw -= 360F) ;
-        //for(; rotationYaw - prevRotationYaw < -180F; rotationYaw += 360F) ;
+    }
+
+    private void setGoals(int radius, float angleOff, float yOff, float yawOff, float pitchOff)
+    {
+        goalZ = (float) (boat.posZ + radius * Math.cos(Math.toRadians(boat.getFacingDirection() + angleOff)));
+        goalX = (float) (boat.posX + radius * Math.sin(Math.toRadians(boat.getFacingDirection() + angleOff)));
+        goalY = (float) boat.posY + yOff;
+
+        goalYaw = boat.rotationYaw + yawOff;
+        goalPitch = boat.rotationPitch + pitchOff;
     }
 
     @Override
