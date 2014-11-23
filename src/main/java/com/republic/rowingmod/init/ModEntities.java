@@ -1,6 +1,7 @@
 package com.republic.rowingmod.init;
 
 import com.republic.rowingmod.RowingMod;
+import com.republic.rowingmod.entity.EntityCamera;
 import com.republic.rowingmod.entity.EntityRowingShell;
 import com.republic.rowingmod.reference.Names;
 import com.republic.rowingmod.reference.Reference;
@@ -15,6 +16,7 @@ public class ModEntities
     public static void init()
     {
         registerEntity(EntityRowingShell.class, Names.Items.ROWING_SHELL);
+        registerEntity(EntityCamera.class, Names.Items.CAMERA);
     }
 
     public static void registerEntity(Class entityClass, String name)

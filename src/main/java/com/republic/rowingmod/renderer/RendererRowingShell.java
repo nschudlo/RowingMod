@@ -26,6 +26,7 @@ public class RendererRowingShell extends Render
     public void doRender(Entity entity, double x, double y, double z, float f, float something)
     {
         EntityRowingShell rowingShell = (EntityRowingShell) entity;
+     //   float[] oarData = {0.0f,0.0f,0.0f,0.0f};
         float[] oarData = rowingShell.getOarData();
         this.shellModel.setOars(oarData[0],oarData[1],oarData[2],oarData[3]);
 

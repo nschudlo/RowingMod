@@ -12,9 +12,9 @@ public class PacketHandler
 
     public static void init()
     {
-        INSTANCE.registerMessage(MessageOarsMoving.class, MessageOarsMoving.class,0,Side.SERVER);
+        INSTANCE.registerMessage(MessageOarKeyPressed.class, MessageOarKeyPressed.class,0, Side.SERVER);
         INSTANCE.registerMessage(MessageUpdateShell.class, MessageUpdateShell.class,1,Side.CLIENT);
-
+        //INSTANCE.registerMessage(MessageOarsMoving.class, MessageOarsMoving.class,2,Side.SERVER);
 
       /*  INSTANCE.registerMessage(MessageTileEntityEE.class, MessageTileEntityEE.class, 0, Side.CLIENT);
         INSTANCE.registerMessage(MessageTileCalcinator.class, MessageTileCalcinator.class, 1, Side.CLIENT);

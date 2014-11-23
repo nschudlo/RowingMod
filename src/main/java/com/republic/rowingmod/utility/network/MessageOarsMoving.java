@@ -48,7 +48,7 @@ public class MessageOarsMoving implements IMessage, IMessageHandler<MessageOarsM
     public IMessage onMessage(MessageOarsMoving message, MessageContext ctx)
     {
         //Send update to all clients
-        PacketHandler.INSTANCE.sendToAll(new MessageUpdateShell(message.boatID,message.lRot,message.lHeight,message.rRot,message.rHeight));
+        //PacketHandler.INSTANCE.sendToAll(new MessageUpdateShell(message.boatID,message.lRot,message.lHeight,message.rRot,message.rHeight));
 
         return null;
     }

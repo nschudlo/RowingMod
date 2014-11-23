@@ -1,8 +1,10 @@
 package com.republic.rowingmod.entity;
 
 import com.republic.rowingmod.utility.LogHelper;
+import com.republic.rowingmod.utility.network.MessageOarKeyPressed;
 import com.republic.rowingmod.utility.network.MessageOarsMoving;
 import com.republic.rowingmod.utility.network.PacketHandler;
+import cpw.mods.fml.client.FMLClientHandler;
 import cpw.mods.fml.common.gameevent.InputEvent;
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
@@ -11,6 +13,7 @@ import net.minecraft.block.material.Material;
 import net.minecraft.client.Minecraft;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityLivingBase;
+import net.minecraft.entity.item.EntityFireworkRocket;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.init.Blocks;
 import net.minecraft.init.Items;
@@ -42,14 +45,24 @@ public class EntityRowingShell extends EntityRowMod
     private double velocityY;
     @SideOnly(Side.CLIENT)
     private double velocityZ;
-    private static final String __OBFID = "CL_00001667";
 
     private float leftHeight, prevLeftHeight;
     private float leftRotation, prevLeftRotation;
     private float rightHeight, prevRightHeight;
     private float rightRotation, prevRightRotation;
 
+    private boolean leftOarDown, rightOarDown, holdWater;
+
     Minecraft minecraft;
+
+    float leftPower;
+    float rightPower;
+    float leftSpeed;
+    float rightSpeed;
+
+    EntityLivingBase camera;
+
+    float trueYaw;
 
 
 
@@ -66,6 +79,12 @@ public class EntityRowingShell extends EntityRowMod
         leftRotation=prevLeftRotation=0.0f;
         rightHeight=prevRightHeight=-0.139623F;
         rightRotation=prevRightRotation=0.0f;
+
+        leftOarDown=rightOarDown=holdWater=false;
+
+        leftPower = rightPower = leftSpeed = rightSpeed = 0.0f;
+        trueYaw = this.rotationYaw;
+
     }
 
     /**
@@ -82,6 +101,12 @@ public class EntityRowingShell extends EntityRowMod
         this.dataWatcher.addObject(17, new Integer(0));
         this.dataWatcher.addObject(18, new Integer(1));
         this.dataWatcher.addObject(19, new Float(0.0F));
+
+        this.dataWatcher.addObject(20, new Float(0.0F));//left rotation
+        this.dataWatcher.addObject(21, new Float(0.0F));//left height
+        this.dataWatcher.addObject(22, new Float(0.0F));//right rotation
+        this.dataWatcher.addObject(23, new Float(0.0F));//right height
+
     }
 
     /**
@@ -157,8 +182,8 @@ public class EntityRowingShell extends EntityRowMod
                 {
                     this.func_145778_a(Items.boat, 1, 0.0F);
                 }
-
                 this.setDead();
+
             }
 
             return true;
@@ -202,9 +227,9 @@ public class EntityRowingShell extends EntityRowMod
         else
         {
             double d3 = p_70056_1_ - this.posX;
-            double d4 = p_70056_3_ - this.posY;
+            double y = p_70056_3_ - this.posY;
             double d5 = p_70056_5_ - this.posZ;
-            double d6 = d3 * d3 + d4 * d4 + d5 * d5;
+            double d6 = d3 * d3 + y * y + d5 * d5;
 
             if (d6 <= 1.0D)
             {
@@ -237,71 +262,96 @@ public class EntityRowingShell extends EntityRowMod
 
     public float[] getOarData()
     {
-        float[] data = {leftRotation,leftHeight,rightRotation,rightHeight};
+        float[] data = {getLeftRotation(),getLeftHeight(),getRightRotation(),getRightHeight()}; //{leftRotation,leftHeight,rightRotation,rightHeight};
         return data;
     }
 
-    public void setOarData(float leftRotation, float leftHeight, float rightRotation, float rightHeight)
+    public void setOarData(boolean leftOar, boolean rightOar, boolean holdWater)
     {
-        this.leftRotation=leftRotation;
-        this.leftHeight=leftHeight;
-        this.rightRotation=rightRotation;
-        this.rightHeight=rightHeight;
+        this.leftOarDown = leftOar;
+        this.rightOarDown = rightOar;
+        this.holdWater = holdWater;
     }
 
 
-    @SideOnly(Side.CLIENT)
+
     public void upDateOars()
     {
-        minecraft = Minecraft.getMinecraft();
-
-        if(this.riddenByEntity != null)
+        if(!this.holdWater)
         {
-            final EntityPlayer owner = (EntityPlayer)this.riddenByEntity;
+            if (this.rightOarDown) {
+                if (leftRotation < 1.20F)
+                    leftRotation += 0.05F;
 
-             final Minecraft minecraft = Minecraft.getMinecraft();
-             final boolean isLocalPlayer = owner == minecraft.thePlayer;
-
-            if(isLocalPlayer)
-            {
-                if (Keyboard.isKeyDown(minecraft.gameSettings.keyBindRight.getKeyCode())) {
-                    if (leftRotation < 1.20F)
-                        leftRotation += 0.05F;
-
-                    if (leftHeight < 0.0F)
-                        leftHeight += 0.05F;
+                if (leftHeight < 0.0F)
+                    leftHeight += 0.05F;
+            } else {
+                if (leftRotation > 0) {
+                    leftRotation -= 0.05F;
+                    leftSpeed += leftRotation;
                 } else {
-                    if (leftRotation > 0)
-                        leftRotation -= 0.05F;
-
-                    if (leftHeight > -0.139623F)
-                        leftHeight -= 0.05F;
+                    if (leftSpeed > 0)
+                        leftSpeed -= 0.8;
+                    else
+                        leftSpeed = 0;
                 }
 
-                if (Keyboard.isKeyDown(minecraft.gameSettings.keyBindLeft.getKeyCode())) {
-                    if (rightRotation < 1.20F)
-                        rightRotation += 0.05F;
+                if (leftHeight > -0.139623F)
+                    leftHeight -= 0.05F;
+                else
+                    leftHeight = -0.139623F;
+            }
 
-                    if (rightHeight < 0.0F)
-                        rightHeight += 0.05F;
+            if (this.leftOarDown) {
+                if (rightRotation < 1.20F)
+                    rightRotation += 0.05F;
+
+                if (rightHeight < 0.0F)
+                    rightHeight += 0.05F;
+            } else {
+                if (rightRotation > 0) {
+                    rightRotation -= 0.05F;
+                    rightSpeed += rightRotation;
                 } else {
-                    if (rightRotation > 0)
-                        rightRotation -= 0.05F;
-
-                    if (rightHeight > -0.139623F)
-                        rightHeight -= 0.05F;
+                    if (rightSpeed > 0)
+                        rightSpeed -= 0.8;
+                    else
+                        rightSpeed = 0;
                 }
-                if(prevLeftHeight!=leftHeight || prevLeftRotation!=leftRotation || prevRightRotation!=rightRotation || prevRightHeight!=rightHeight)
-                {
-                    prevLeftRotation = leftRotation;
-                    prevLeftHeight = leftHeight;
-                    prevRightRotation=rightRotation;
-                    prevRightHeight=rightHeight;
-
-                    PacketHandler.INSTANCE.sendToServer(new MessageOarsMoving(this.getEntityId(), leftRotation, leftHeight, rightRotation, rightHeight));
-                }
+                if (rightHeight > -0.139623F)
+                    rightHeight -= 0.05F;
+                else
+                    rightHeight = -0.139623F;
             }
         }
+        else {
+            if (leftHeight > -0.15F)
+                leftHeight -= 0.05F;
+            if (rightHeight > -0.15F)
+                rightHeight -= 0.05F;
+
+
+            if (leftSpeed > 0)
+                leftSpeed -= 1;
+            else
+                leftSpeed = 0;
+
+            if (rightSpeed > 0)
+                rightSpeed -= 1;
+            else
+                rightSpeed = 0;
+
+            leftSpeed = 0;
+            rightSpeed = 0;
+
+        }
+        this.dataWatcher.updateObject(20, Float.valueOf(leftRotation));
+        this.dataWatcher.updateObject(21, Float.valueOf(leftHeight));
+        this.dataWatcher.updateObject(22, Float.valueOf(rightRotation));
+        this.dataWatcher.updateObject(23, Float.valueOf(rightHeight));
+
+
+
     }
 
     /**
@@ -311,10 +361,55 @@ public class EntityRowingShell extends EntityRowMod
     {
         super.onUpdate();
 
-        if(worldObj.isRemote)
-            upDateOars();
 
-        /*if (this.getTimeSinceHit() > 0)
+        if(this.worldObj.isRemote) //Client side
+        {
+            final Minecraft minecraft = Minecraft.getMinecraft();
+            if(this.riddenByEntity != null)
+            {
+                final EntityPlayer rider = (EntityPlayer)this.riddenByEntity;
+
+                final boolean isLocalPlayer = rider == minecraft.thePlayer;
+
+                //If the current player is in the boat, then these controls will effect it
+                if(isLocalPlayer)
+                {
+                    boolean leftDown = Keyboard.isKeyDown(minecraft.gameSettings.keyBindLeft.getKeyCode());
+                    boolean rightDown = Keyboard.isKeyDown(minecraft.gameSettings.keyBindRight.getKeyCode());
+                    boolean forwardDown = Keyboard.isKeyDown(minecraft.gameSettings.keyBindForward.getKeyCode());
+
+                    if(minecraft.inGameHasFocus)//This prevents the ability to row while in guis and chatting...
+                        PacketHandler.INSTANCE.sendToServer(new MessageOarKeyPressed(this.getEntityId(), leftDown, rightDown, forwardDown));
+                }
+
+                if (camera == null) {
+                    camera = new EntityCamera(worldObj, this);
+                    worldObj.spawnEntityInWorld(camera);
+                }
+
+                if(minecraft.gameSettings.thirdPersonView==0)
+                    minecraft.renderViewEntity = minecraft.thePlayer;
+                else
+                    minecraft.renderViewEntity = camera;
+
+            }
+            else
+            {
+                minecraft.renderViewEntity = minecraft.thePlayer;
+                camera = null;
+            }
+
+
+
+        }
+        else //Server Side
+        {
+            upDateOars();
+        }
+
+
+
+        if (this.getTimeSinceHit() > 0)
         {
             this.setTimeSinceHit(this.getTimeSinceHit() - 1);
         }
@@ -323,7 +418,6 @@ public class EntityRowingShell extends EntityRowMod
         {
             this.setDamageTaken(this.getDamageTaken() - 1.0F);
         }
-        */
 
         this.prevPosX = this.posX;
         this.prevPosY = this.posY;
@@ -344,14 +438,16 @@ public class EntityRowingShell extends EntityRowMod
         }
 
         double d10 = Math.sqrt(this.motionX * this.motionX + this.motionZ * this.motionZ);
-        double d2;
-        double d4;
+        double x;
+        double y;
         int j;
 
+        /*
+        //Calculations to add water particles
         if (d10 > 0.26249999999999996D)
         {
-            d2 = Math.cos((double)this.rotationYaw * Math.PI / 180.0D);
-            d4 = Math.sin((double)this.rotationYaw * Math.PI / 180.0D);
+            x = Math.cos((double)this.rotationYaw * Math.PI / 180.0D);
+            y = Math.sin((double)this.rotationYaw * Math.PI / 180.0D);
 
             for (j = 0; (double)j < 1.0D + d10 * 60.0D; ++j)
             {
@@ -362,42 +458,45 @@ public class EntityRowingShell extends EntityRowMod
 
                 if (this.rand.nextBoolean())
                 {
-                    d8 = this.posX - d2 * d5 * 0.8D + d4 * d6;
-                    d9 = this.posZ - d4 * d5 * 0.8D - d2 * d6;
+                    d8 = this.posX - x * d5 * 0.8D + y * d6;
+                    d9 = this.posZ - y * d5 * 0.8D - x * d6;
                     this.worldObj.spawnParticle("splash", d8, this.posY - 0.125D, d9, this.motionX, this.motionY, this.motionZ);
                 }
                 else
                 {
-                    d8 = this.posX + d2 + d4 * d5 * 0.7D;
-                    d9 = this.posZ + d4 - d2 * d5 * 0.7D;
+                    d8 = this.posX + x + y * d5 * 0.7D;
+                    d9 = this.posZ + y - x * d5 * 0.7D;
                     this.worldObj.spawnParticle("splash", d8, this.posY - 0.125D, d9, this.motionX, this.motionY, this.motionZ);
                 }
             }
         }
-
-        double d11;
+        */
+        double z;
         double d12;
 
         if (this.worldObj.isRemote && this.isBoatEmpty)
         {
             if (this.boatPosRotationIncrements > 0)
             {
-                d2 = this.posX + (this.boatX - this.posX) / (double)this.boatPosRotationIncrements;
-                d4 = this.posY + (this.boatY - this.posY) / (double)this.boatPosRotationIncrements;
-                d11 = this.posZ + (this.boatZ - this.posZ) / (double)this.boatPosRotationIncrements;
+                x = this.posX + (this.boatX - this.posX) / (double)this.boatPosRotationIncrements;
+                y = this.posY + (this.boatY - this.posY) / (double)this.boatPosRotationIncrements;
+                z = this.posZ + (this.boatZ - this.posZ) / (double)this.boatPosRotationIncrements;
                 d12 = MathHelper.wrapAngleTo180_double(this.boatYaw - (double) this.rotationYaw);
                 this.rotationYaw = (float)((double)this.rotationYaw + d12 / (double)this.boatPosRotationIncrements);
                 this.rotationPitch = (float)((double)this.rotationPitch + (this.boatPitch - (double)this.rotationPitch) / (double)this.boatPosRotationIncrements);
                 --this.boatPosRotationIncrements;
-                this.setPosition(d2, d4, d11);
-                this.setRotation(this.rotationYaw, this.rotationPitch);
+
+                this.setPosition(x, y, z);
+
+                //Commented this out because all it does is modulo to 360;
+                //this.setRotation(this.rotationYaw, this.rotationPitch);
             }
             else
             {
-                d2 = this.posX + this.motionX;
-                d4 = this.posY + this.motionY;
-                d11 = this.posZ + this.motionZ;
-                this.setPosition(d2, d4, d11);
+                x = this.posX + this.motionX;
+                y = this.posY + this.motionY;
+                z = this.posZ + this.motionZ;
+                this.setPosition(x, y, z);
 
                 if (this.onGround)
                 {
@@ -413,10 +512,13 @@ public class EntityRowingShell extends EntityRowMod
         }
         else
         {
+
+
+
             if (d0 < 1.0D)
             {
-                d2 = d0 * 2.0D - 1.0D;
-                this.motionY += 0.03999999910593033D * d2;
+                x = d0 * 2.0D - 1.0D;
+                this.motionY += 0.03999999910593033D * x;
             }
             else
             {
@@ -432,24 +534,27 @@ public class EntityRowingShell extends EntityRowMod
             {
                 EntityLivingBase entitylivingbase = (EntityLivingBase)this.riddenByEntity;
                 float f = this.riddenByEntity.rotationYaw;// + -entitylivingbase.moveStrafing * 90.0F;
+                f = this.rotationYaw+90;
 
-                this.motionX += -Math.sin((double)(f * (float)Math.PI / 180.0F)) * this.speedMultiplier * (double)entitylivingbase.moveForward * 0.05000000074505806D;
-                this.motionZ += Math.cos((double)(f * (float)Math.PI / 180.0F)) * this.speedMultiplier * (double)entitylivingbase.moveForward * 0.05000000074505806D;
+
+                this.motionX += -Math.sin((double) (f * (float) Math.PI / 180.0F)) * this.speedMultiplier * -leftSpeed/*(double)entitylivingbase.moveForward*/ * 0.05000000074505806D;
+                this.motionZ += Math.cos((double) (f * (float) Math.PI / 180.0F)) * this.speedMultiplier * -leftSpeed/*(double)entitylivingbase.moveForward*/ * 0.05000000074505806D;
+
 
 
             }
 
-            d2 = Math.sqrt(this.motionX * this.motionX + this.motionZ * this.motionZ);
+            x = Math.sqrt(this.motionX * this.motionX + this.motionZ * this.motionZ);
 
-            if (d2 > 0.35D)
+            if (x > 0.35D)
             {
-                d4 = 0.35D / d2;
-                this.motionX *= d4;
-                this.motionZ *= d4;
-                d2 = 0.35D;
+                y = 0.35D / x;
+                this.motionX *= y;
+                this.motionZ *= y;
+                x = 0.35D;
             }
 
-            if (d2 > d10 && this.speedMultiplier < 0.35D)
+            if (x > d10 && this.speedMultiplier < 0.35D)
             {
                 this.speedMultiplier += (0.35D - this.speedMultiplier) / 35.0D;
 
@@ -500,12 +605,20 @@ public class EntityRowingShell extends EntityRowMod
                 this.motionZ *= 0.5D;
             }
 
+            if(this.holdWater)
+            {
+                this.motionX *= 0.9D;
+                this.motionY *= 0.5D;
+                this.motionZ *= 0.9D;
+            }
+
             this.moveEntity(this.motionX, this.motionY, this.motionZ);
 
             if (this.isCollidedHorizontally && d10 > 0.2D)
             {
                 if (!this.worldObj.isRemote && !this.isDead)
                 {
+
                     this.setDead();
 
                     for (l = 0; l < 3; ++l)
@@ -527,16 +640,16 @@ public class EntityRowingShell extends EntityRowMod
             }
 
             this.rotationPitch = 0.0F;
-            d4 = (double)this.rotationYaw;
-            d11 = this.prevPosX - this.posX;
+            y = (double)this.rotationYaw;
+            z = this.prevPosX - this.posX;
             d12 = this.prevPosZ - this.posZ;
 
-            if (d11 * d11 + d12 * d12 > 0.001D)
+            if (z * z + d12 * d12 > 0.001D)
             {
-                d4 = (double)((float)(Math.atan2(d12, d11) * 180.0D / Math.PI));
+                y = (double)((float)(Math.atan2(d12, z) * 180.0D / Math.PI));
             }
 
-            double d7 = MathHelper.wrapAngleTo180_double(d4 - (double)this.rotationYaw);
+            double d7 = MathHelper.wrapAngleTo180_double(y - (double)this.rotationYaw);
 
             if (d7 > 20.0D)
             {
@@ -550,13 +663,17 @@ public class EntityRowingShell extends EntityRowMod
 
             this.rotationYaw = (float)((double)this.rotationYaw + d7);
 
+            EntityLivingBase rider = (EntityLivingBase)this.riddenByEntity;
             //Added this to keep boat aligned with rider
             if(this.riddenByEntity != null)
             {
                 this.rotationYaw = this.riddenByEntity.rotationYaw-90.0f;
+                // this.setRotation(rider.rotationYaw-90f, this.rotationPitch);
             }
 
-            this.setRotation(this.rotationYaw, this.rotationPitch);
+
+
+
 
             if (!this.worldObj.isRemote)
             {
@@ -581,13 +698,14 @@ public class EntityRowingShell extends EntityRowMod
                 }
             }
         }
+
     }
 
     public void updateRiderPosition()
     {
         if (this.riddenByEntity != null)
         {
-            float slideLength = Math.max(leftRotation,rightRotation);
+            float slideLength = Math.max(getLeftRotation(),getRightRotation());
             double d0 = (Math.cos((double)this.rotationYaw * Math.PI / 180.0D) * 0.4D)*slideLength*-1.5; //added *slideLength*-1.5
             double d1 = (Math.sin((double)this.rotationYaw * Math.PI / 180.0D) * 0.4D)*slideLength*-1.5; //-1.5 made the slide length longer
             this.riddenByEntity.setPosition(this.posX + d0, this.posY + this.getMountedYOffset() + this.riddenByEntity.getYOffset(), this.posZ + d1);
@@ -649,6 +767,7 @@ public class EntityRowingShell extends EntityRowMod
                 if (!this.worldObj.isRemote && !this.isDead)
                 {
                     this.setDead();
+
                     int l;
 
                     for (l = 0; l < 3; ++l)
@@ -719,6 +838,26 @@ public class EntityRowingShell extends EntityRowMod
         return this.dataWatcher.getWatchableObjectInt(18);
     }
 
+    public float getLeftRotation()
+    {
+        return this.dataWatcher.getWatchableObjectFloat(20);
+    }
+
+    public float getLeftHeight()
+    {
+        return this.dataWatcher.getWatchableObjectFloat(21);
+    }
+
+    public float getRightRotation()
+    {
+        return this.dataWatcher.getWatchableObjectFloat(22);
+    }
+
+    public float getRightHeight()
+    {
+        return this.dataWatcher.getWatchableObjectFloat(23);
+    }
+
     /**
      * true if no player in boat
      */
@@ -726,6 +865,27 @@ public class EntityRowingShell extends EntityRowMod
     public void setIsBoatEmpty(boolean p_70270_1_)
     {
         this.isBoatEmpty = p_70270_1_;
+    }
+
+    @SideOnly(Side.CLIENT)
+    public EntityLivingBase getCamera()
+    {
+        return camera;
+    }
+
+    public float getFacingDirection()
+    {
+        // return (this.rotationYaw%360 < 0 ? 360 + (this.rotationYaw) : this.rotationYaw)%360;
+        //return this.rotationYaw+90;
+
+        //This calculation maps Minecraft0 to Regular0, Minecraft-90 to Regular90, Minecraft90 to Regular270
+        //The Minecraft plane uses Z+ at 0 and X+ at 90
+        return (360 - (this.rotationYaw+90)) %360;
+    }
+
+    public float getTrueYaw()
+    {
+        return trueYaw;
     }
 
 }

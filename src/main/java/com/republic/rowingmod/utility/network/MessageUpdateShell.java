@@ -12,39 +12,34 @@ public class MessageUpdateShell implements IMessage, IMessageHandler<MessageUpda
 {
 
     int boatID;
-    float lRot,lHeight,rRot,rHeight;
+    boolean leftOar;
+    boolean rightOar;
 
     public MessageUpdateShell()
     {
     }
 
-    public MessageUpdateShell(int boatId, float lRot, float lHeight, float rRot, float rHeight)
+    public MessageUpdateShell(int boatId, boolean leftOar, boolean rightOar)
     {
         this.boatID = boatId;
-        this.lRot = lRot;
-        this.lHeight = lHeight;
-        this.rRot = rRot;
-        this.rHeight = rHeight;
+        this.leftOar = leftOar;
+        this.rightOar = rightOar;
     }
 
     @Override
     public void fromBytes(ByteBuf buf)
     {
-        this.boatID=buf.readInt();
-        this.lRot=buf.readFloat();
-        this.lHeight=buf.readFloat();
-        this.rRot=buf.readFloat();
-        this.rHeight=buf.readFloat();
+        this.boatID = buf.readInt();
+        this.leftOar = buf.readBoolean();
+        this.rightOar = buf.readBoolean();
     }
 
     @Override
     public void toBytes(ByteBuf buf)
     {
-        buf.writeInt(boatID);
-        buf.writeFloat(lRot);
-        buf.writeFloat(lHeight);
-        buf.writeFloat(rRot);
-        buf.writeFloat(rHeight);
+        buf.writeInt(this.boatID);
+        buf.writeBoolean(this.leftOar);
+        buf.writeBoolean(this.rightOar);
     }
 
 
@@ -52,7 +47,8 @@ public class MessageUpdateShell implements IMessage, IMessageHandler<MessageUpda
     public IMessage onMessage(MessageUpdateShell message, MessageContext ctx)
     {
         EntityRowingShell shell = (EntityRowingShell)Minecraft.getMinecraft().theWorld.getEntityByID(message.boatID);
-        shell.setOarData(message.lRot, message.lHeight, message.rRot, message.rHeight);
+        //shell.setOarData(message.leftOar, message.rightOar, message.);
+
 
         return null;
     }

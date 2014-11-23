@@ -20,6 +20,7 @@ public class ClientProxy extends CommonProxy
     public void registerKeyBindings() {
         //ClientRegistry.registerKeyBinding(Keybindings.port);
         //ClientRegistry.registerKeyBinding(Keybindings.starboard);
+        ClientRegistry.registerKeyBinding(Keybindings.boatperspective);
     }
 
 }
