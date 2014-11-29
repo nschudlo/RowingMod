@@ -16,7 +16,8 @@ public class ModEntities
     public static void init()
     {
         registerEntity(EntityRowingShell.class, Names.Items.ROWING_SHELL);
-        registerEntity(EntityCamera.class, Names.Items.CAMERA);
+
+       // registerEntity(EntityCamera.class, Names.Items.CAMERA);
     }
 
     public static void registerEntity(Class entityClass, String name)

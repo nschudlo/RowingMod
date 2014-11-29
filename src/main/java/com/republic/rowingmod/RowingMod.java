@@ -28,7 +28,7 @@ public class RowingMod
         ModEntities.init();
 
         proxy.registerRenderers();
-       proxy.registerKeyBindings();
+        proxy.registerKeyBindings();
     }
 
     @Mod.EventHandler

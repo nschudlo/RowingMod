@@ -4,8 +4,10 @@ import com.republic.rowingmod.entity.EntityRowingShell;
 import com.republic.rowingmod.reference.Names;
 import net.minecraft.creativetab.CreativeTabs;
 import net.minecraft.entity.Entity;
+import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.item.EntityBoat;
 import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.init.Blocks;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.AxisAlignedBB;
@@ -23,7 +25,15 @@ public class ItemRowingShell extends ItemRowMod
         super();
         this.setUnlocalizedName(Names.Items.ROWING_SHELL);
         this.setCreativeTab(CreativeTabs.tabTransport);
+        this.setFull3D();
     }
+
+    @Override
+    public boolean onEntitySwing(EntityLivingBase entityLiving, ItemStack stack)
+    {
+        return true;
+    }
+
 
     /**
      * Called whenever this item is equipped and the right mouse button is pressed. Args: itemStack, world, entityPlayer

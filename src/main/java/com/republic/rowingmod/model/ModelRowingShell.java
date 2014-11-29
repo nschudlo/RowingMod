@@ -8,6 +8,9 @@ package com.republic.rowingmod.model;
         import org.lwjgl.input.Keyboard;
         import org.lwjgl.opengl.GL11;
 
+        import java.util.List;
+        import java.util.ListIterator;
+
 public class ModelRowingShell extends ModelBase
 {
     //fields
@@ -27,8 +30,21 @@ public class ModelRowingShell extends ModelBase
     float rightRotation = 0.0f;
     float rightHeight = -0.1396263F;
 
+    boolean renderOars;
+
+    public ModelRowingShell(boolean renderOars)
+    {
+        this.renderOars = renderOars;
+        init();
+    }
 
     public ModelRowingShell()
+    {
+        renderOars = true;
+        init();
+    }
+
+    public void init()
     {
         textureWidth = 128;
         textureHeight = 128;
@@ -73,52 +89,41 @@ public class ModelRowingShell extends ModelBase
         RiggerStar.mirror = true;
         setRotation(RiggerStar, 0F, -0.8116305F, 0F);
 
-        //Oars
-//        OarPort = new ModelRenderer(this, 0, 39);
-//        OarPort.addBox(0F, 0F, 0F, 1, 1, 51);
-//        OarPort.setRotationPoint(15F, -6F, 0F);
-//        OarPort.setTextureSize(128, 128);
-//        OarPort.mirror = true;
-//        setRotation(OarPort, -0.1396263F, 2.617994F, 0F);
-//        BladePort = new ModelRenderer(this, 44, 0);
-//        BladePort.addBox(0F, 0F, 0F, 1, 6, 10);
-//        BladePort.setRotationPoint(39F, 0F, -40F);
-//        BladePort.setTextureSize(128, 128);
-//        BladePort.mirror = true;
-//        setRotation(BladePort, -0.1396263F, 2.617994F, 0F);
+        if(renderOars)
+        {
+            OarPort = new ModelRenderer(this, 0, 39);
+            OarPort.addBox(0F, 0F, -14F, 1, 1, 51);
+            OarPort.setRotationPoint(22F, -4F, -12F);
+            OarPort.setTextureSize(128, 128);
+            OarPort.mirror = true;
+            setRotation(OarPort, -0.1396263F, 2.617994F, 0F);
+            BladePort = new ModelRenderer(this, 44, 0);
+            BladePort.addBox(0F, -1F, 36F, 1, 6, 10);
+            BladePort.setRotationPoint(22F, -4F, -12F);
+            BladePort.setTextureSize(128, 128);
+            BladePort.mirror = true;
+            setRotation(BladePort, -0.1396263F, 2.617994F, 0F);
 
-        OarPort = new ModelRenderer(this, 0, 39);
-        OarPort.addBox(0F, 0F, -14F, 1, 1, 51);
-        OarPort.setRotationPoint(22F, -4F, -12F);
-        OarPort.setTextureSize(128, 128);
-        OarPort.mirror = true;
-        setRotation(OarPort, -0.1396263F, 2.617994F, 0F);
-        BladePort = new ModelRenderer(this, 44, 0);
-        BladePort.addBox(0F, -1F, 36F, 1, 6, 10);
-        BladePort.setRotationPoint(22F, -4F, -12F);
-        BladePort.setTextureSize(128, 128);
-        BladePort.mirror = true;
-        setRotation(BladePort, -0.1396263F, 2.617994F, 0F);
-
-        OarStarboard = new ModelRenderer(this, 0, 39);
-        OarStarboard.addBox(0F, 0F, -14F, 1, 1, 51);
-        OarStarboard.setRotationPoint(22F, -4F, 28F);
-        OarStarboard.setTextureSize(128, 128);
-        OarStarboard.mirror = true;
-        setRotation(OarStarboard, -0.1396263F, 0.5201081F, 0F);
-        BladeStarboard = new ModelRenderer(this, 44, 0);
-        BladeStarboard.addBox(0F, -1F, 34F, 1, 6, 10);
-        BladeStarboard.setRotationPoint(22F, -4F, 28F);
-        BladeStarboard.setTextureSize(128, 128);
-        BladeStarboard.mirror = true;
-        setRotation(BladeStarboard, -0.1396263F, 0.5235988F, 0F);
+            OarStarboard = new ModelRenderer(this, 0, 39);
+            OarStarboard.addBox(0F, 0F, -14F, 1, 1, 51);
+            OarStarboard.setRotationPoint(22F, -4F, 28F);
+            OarStarboard.setTextureSize(128, 128);
+            OarStarboard.mirror = true;
+            setRotation(OarStarboard, -0.1396263F, 0.5201081F, 0F);
+            BladeStarboard = new ModelRenderer(this, 44, 0);
+            BladeStarboard.addBox(0F, -1F, 34F, 1, 6, 10);
+            BladeStarboard.setRotationPoint(22F, -4F, 28F);
+            BladeStarboard.setTextureSize(128, 128);
+            BladeStarboard.mirror = true;
+            setRotation(BladeStarboard, -0.1396263F, 0.5235988F, 0F);
+        }
 
     }
 
     public void render(Entity entity, float f, float f1, float f2, float f3, float f4, float f5)
     {
-        super.render(entity, f, f1, f2, f3, f4, f5);
-        setRotationAngles(f, f1, f2, f3, f4, f5, entity);
+       // super.render(entity, f, f1, f2, f3, f4, f5);
+       // setRotationAngles(f, f1, f2, f3, f4, f5, entity);
         GL11.glPushMatrix();
         GL11.glTranslatef(-0.7f, 0.1f, -0.5f);
         Hull.render(f5);
@@ -140,23 +145,21 @@ public class ModelRowingShell extends ModelBase
         RiggerStar.render(f5);
 
 
+        if(renderOars)
+        {
+            setRotation(OarPort, leftHeight, 2.617994F + leftRotation, 0F);
+            setRotation(BladePort, leftHeight, 2.617994F + leftRotation, 0f);
 
-        setRotation(OarPort, leftHeight, 2.617994F+leftRotation, 0F);
-        setRotation(BladePort, leftHeight, 2.617994F+leftRotation, 0f);
+            setRotation(OarStarboard, rightHeight, 0.5201081F - rightRotation, 0F);
+            setRotation(BladeStarboard, rightHeight, 0.5235988F - rightRotation, 0F);
 
-        setRotation(OarStarboard, rightHeight, 0.5201081F-rightRotation, 0F);
-        setRotation(BladeStarboard, rightHeight, 0.5235988F-rightRotation, 0F);
+            OarPort.render(f5);
+            BladePort.render(f5);
 
-        OarPort.render(f5);
-        BladePort.render(f5);
-
-        OarStarboard.render(f5);
-        BladeStarboard.render(f5);
-
+            OarStarboard.render(f5);
+            BladeStarboard.render(f5);
+        }
         GL11.glPopMatrix();
-
-
-
     }
 
 
@@ -168,6 +171,7 @@ public class ModelRowingShell extends ModelBase
         rightHeight = rHeight;
     }
 
+
     private void setRotation(ModelRenderer model, float x, float y, float z)
     {
         model.rotateAngleX = x;
@@ -178,9 +182,6 @@ public class ModelRowingShell extends ModelBase
     public void setRotationAngles(float f, float f1, float f2, float f3, float f4, float f5, Entity entity)
     {
         super.setRotationAngles(f, f1, f2, f3, f4, f5, entity);
-
-
-
     }
 
 }

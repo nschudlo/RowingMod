@@ -1,11 +1,8 @@
 package com.republic.rowingmod.entity;
 
-import com.republic.rowingmod.utility.LogHelper;
+
 import com.republic.rowingmod.utility.network.MessageOarKeyPressed;
-import com.republic.rowingmod.utility.network.MessageOarsMoving;
 import com.republic.rowingmod.utility.network.PacketHandler;
-import cpw.mods.fml.client.FMLClientHandler;
-import cpw.mods.fml.common.gameevent.InputEvent;
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
 import net.minecraft.block.Block;
@@ -13,12 +10,12 @@ import net.minecraft.block.material.Material;
 import net.minecraft.client.Minecraft;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityLivingBase;
-import net.minecraft.entity.item.EntityFireworkRocket;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.init.Blocks;
 import net.minecraft.init.Items;
 import net.minecraft.item.Item;
 import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.util.AxisAlignedBB;
 import net.minecraft.util.DamageSource;
 import net.minecraft.util.MathHelper;
@@ -46,13 +43,14 @@ public class EntityRowingShell extends EntityRowMod
     @SideOnly(Side.CLIENT)
     private double velocityZ;
 
-    private float leftHeight, prevLeftHeight;
-    private float leftRotation, prevLeftRotation;
-    private float rightHeight, prevRightHeight;
-    private float rightRotation, prevRightRotation;
+    private float leftHeight;
+    private float leftRotation;
+    private float rightHeight;
+    private float rightRotation;
 
     private boolean leftOarDown, rightOarDown, holdWater;
 
+    @SideOnly(Side.CLIENT)
     Minecraft minecraft;
 
     float leftPower;
@@ -60,9 +58,10 @@ public class EntityRowingShell extends EntityRowMod
     float leftSpeed;
     float rightSpeed;
 
+    @SideOnly(Side.CLIENT)
     EntityLivingBase camera;
 
-    float trueYaw;
+
 
 
 
@@ -75,16 +74,27 @@ public class EntityRowingShell extends EntityRowMod
         this.setSize(1.5F, 0.6F);
         this.yOffset = this.height / 2.0F;
 
-        leftHeight=prevLeftHeight=-0.139623F;
-        leftRotation=prevLeftRotation=0.0f;
-        rightHeight=prevRightHeight=-0.139623F;
-        rightRotation=prevRightRotation=0.0f;
+        leftHeight=-0.139623F;
+        leftRotation=0.0f;
+        rightHeight=-0.139623F;
+        rightRotation=0.0f;
 
         leftOarDown=rightOarDown=holdWater=false;
 
         leftPower = rightPower = leftSpeed = rightSpeed = 0.0f;
-        trueYaw = this.rotationYaw;
 
+    }
+
+    public EntityRowingShell(World world, double x, double y, double z)
+    {
+        this(world);
+        this.setPosition(x, y + (double)this.yOffset, z);
+        this.motionX = 0.0D;
+        this.motionY = 0.0D;
+        this.motionZ = 0.0D;
+        this.prevPosX = x;
+        this.prevPosY = y;
+        this.prevPosZ = z;
     }
 
     /**
@@ -134,17 +144,7 @@ public class EntityRowingShell extends EntityRowMod
         return true;
     }
 
-    public EntityRowingShell(World world, double x, double y, double z)
-    {
-        this(world);
-        this.setPosition(x, y + (double)this.yOffset, z);
-        this.motionX = 0.0D;
-        this.motionY = 0.0D;
-        this.motionZ = 0.0D;
-        this.prevPosX = x;
-        this.prevPosY = y;
-        this.prevPosZ = z;
-    }
+
 
     /**
      * Returns the Y offset from the entity's position for any entity riding this one.
@@ -345,13 +345,52 @@ public class EntityRowingShell extends EntityRowMod
             rightSpeed = 0;
 
         }
-        this.dataWatcher.updateObject(20, Float.valueOf(leftRotation));
-        this.dataWatcher.updateObject(21, Float.valueOf(leftHeight));
-        this.dataWatcher.updateObject(22, Float.valueOf(rightRotation));
-        this.dataWatcher.updateObject(23, Float.valueOf(rightHeight));
+        this.dataWatcher.updateObject(20, leftRotation);
+        this.dataWatcher.updateObject(21, leftHeight);
+        this.dataWatcher.updateObject(22, rightRotation);
+        this.dataWatcher.updateObject(23, rightHeight);
 
 
 
+    }
+
+    @SideOnly(Side.CLIENT)
+    public void clientTasks()
+    {
+        final Minecraft minecraft = Minecraft.getMinecraft();
+        if(this.riddenByEntity != null)
+        {
+            final EntityPlayer rider = (EntityPlayer)this.riddenByEntity;
+
+            final boolean isLocalPlayer = rider == minecraft.thePlayer;
+
+            //If the current player is in the boat, then these controls will effect it
+            if(isLocalPlayer)
+            {
+                boolean leftDown = Keyboard.isKeyDown(minecraft.gameSettings.keyBindLeft.getKeyCode());
+                boolean rightDown = Keyboard.isKeyDown(minecraft.gameSettings.keyBindRight.getKeyCode());
+                boolean forwardDown = Keyboard.isKeyDown(minecraft.gameSettings.keyBindForward.getKeyCode());
+
+                if(minecraft.inGameHasFocus)//This prevents the ability to row while in guis and chatting...
+                    PacketHandler.INSTANCE.sendToServer(new MessageOarKeyPressed(this.getEntityId(), leftDown, rightDown, forwardDown));
+            }
+
+            if (camera == null) {
+               camera = new EntityCamera(this.worldObj, this);
+               worldObj.spawnEntityInWorld(camera);
+              }
+
+               if(minecraft.gameSettings.thirdPersonView==0)
+                  minecraft.renderViewEntity = minecraft.thePlayer;
+            else
+               minecraft.renderViewEntity = camera;
+
+        }
+        else
+        {
+               minecraft.renderViewEntity = minecraft.thePlayer;
+                camera = null;
+        }
     }
 
     /**
@@ -364,41 +403,8 @@ public class EntityRowingShell extends EntityRowMod
 
         if(this.worldObj.isRemote) //Client side
         {
-            final Minecraft minecraft = Minecraft.getMinecraft();
-            if(this.riddenByEntity != null)
-            {
-                final EntityPlayer rider = (EntityPlayer)this.riddenByEntity;
 
-                final boolean isLocalPlayer = rider == minecraft.thePlayer;
-
-                //If the current player is in the boat, then these controls will effect it
-                if(isLocalPlayer)
-                {
-                    boolean leftDown = Keyboard.isKeyDown(minecraft.gameSettings.keyBindLeft.getKeyCode());
-                    boolean rightDown = Keyboard.isKeyDown(minecraft.gameSettings.keyBindRight.getKeyCode());
-                    boolean forwardDown = Keyboard.isKeyDown(minecraft.gameSettings.keyBindForward.getKeyCode());
-
-                    if(minecraft.inGameHasFocus)//This prevents the ability to row while in guis and chatting...
-                        PacketHandler.INSTANCE.sendToServer(new MessageOarKeyPressed(this.getEntityId(), leftDown, rightDown, forwardDown));
-                }
-
-                if (camera == null) {
-                    camera = new EntityCamera(worldObj, this);
-                    worldObj.spawnEntityInWorld(camera);
-                }
-
-                if(minecraft.gameSettings.thirdPersonView==0)
-                    minecraft.renderViewEntity = minecraft.thePlayer;
-                else
-                    minecraft.renderViewEntity = camera;
-
-            }
-            else
-            {
-                minecraft.renderViewEntity = minecraft.thePlayer;
-                camera = null;
-            }
-
+            clientTasks();
 
 
         }
@@ -532,9 +538,9 @@ public class EntityRowingShell extends EntityRowMod
 
             if (this.riddenByEntity != null && this.riddenByEntity instanceof EntityLivingBase)
             {
-                EntityLivingBase entitylivingbase = (EntityLivingBase)this.riddenByEntity;
-                float f = this.riddenByEntity.rotationYaw;// + -entitylivingbase.moveStrafing * 90.0F;
-                f = this.rotationYaw+90;
+                //EntityLivingBase entitylivingbase = (EntityLivingBase)this.riddenByEntity;
+                //float f = this.riddenByEntity.rotationYaw;// + -entitylivingbase.moveStrafing * 90.0F;
+                float f = this.rotationYaw+90;
 
 
                 this.motionX += -Math.sin((double) (f * (float) Math.PI / 180.0F)) * this.speedMultiplier * -leftSpeed/*(double)entitylivingbase.moveForward*/ * 0.05000000074505806D;
@@ -881,11 +887,6 @@ public class EntityRowingShell extends EntityRowMod
         //This calculation maps Minecraft0 to Regular0, Minecraft-90 to Regular90, Minecraft90 to Regular270
         //The Minecraft plane uses Z+ at 0 and X+ at 90
         return (360 - (this.rotationYaw+90)) %360;
-    }
-
-    public float getTrueYaw()
-    {
-        return trueYaw;
     }
 
 }

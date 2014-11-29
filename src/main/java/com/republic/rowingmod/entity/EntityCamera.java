@@ -1,26 +1,14 @@
 package com.republic.rowingmod.entity;
 
 import com.republic.rowingmod.client.settings.Keybindings;
-import com.republic.rowingmod.reference.Reference;
 import com.republic.rowingmod.utility.LogHelper;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.EntityRenderer;
-import net.minecraft.client.renderer.RenderGlobal;
-import net.minecraft.client.resources.IResource;
-import net.minecraft.client.resources.IResourceManager;
 import net.minecraft.client.settings.KeyBinding;
-import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.item.ItemStack;
-import net.minecraft.util.ResourceLocation;
 import net.minecraft.world.World;
-import net.minecraftforge.client.ForgeHooksClient;
 import org.lwjgl.input.Keyboard;
-import org.lwjgl.util.vector.Vector3f;
 
-import java.io.IOException;
-import java.util.List;
-import java.util.Set;
 
 public class EntityCamera extends EntityLivingBase
 {
@@ -47,7 +35,7 @@ public class EntityCamera extends EntityLivingBase
         setSize(0F, 0F);
         minecraft = Minecraft.getMinecraft();
         prevView=minecraft.gameSettings.thirdPersonView;
-    }
+            }
 
     public EntityCamera(World world, EntityRowingShell d)
     {
@@ -58,6 +46,11 @@ public class EntityCamera extends EntityLivingBase
 
         togglePerspectiveOriginal = minecraft.gameSettings.keyBindTogglePerspective.getKeyCode();
         original = minecraft.gameSettings.keyBindTogglePerspective;
+
+
+        posX = d.posX;
+        posZ = d.posZ;
+        posY = d.posY;
     }
 
 
@@ -143,8 +136,6 @@ public class EntityCamera extends EntityLivingBase
             blockPerspectiveKey();
         }
 
-
-
         prev[0] = (float)posX;
         prev[1] = (float)posY;
         prev[2] = (float)posZ;
@@ -221,13 +212,12 @@ public class EntityCamera extends EntityLivingBase
                 goalZ = (float) boat.riddenByEntity.posZ;
 
                 goalYaw = boat.rotationYaw - 90;
-                goalPitch = boat.riddenByEntity.rotationPitch;
+                goalPitch = -boat.riddenByEntity.rotationPitch;
             }
         }
 
 
         int div = 8;
-
 
         if (this.posX < goalX - 0.01)
             posX += (goalX - posX) / div;
