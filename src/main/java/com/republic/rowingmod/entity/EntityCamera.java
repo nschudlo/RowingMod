@@ -57,7 +57,7 @@ public class EntityCamera extends EntityLivingBase
     private void blockPerspectiveKey()
     {
         //Check if the binding has already been changed
-        if(minecraft.gameSettings.keyBindTogglePerspective != Keybindings.boatperspective)
+        if(minecraft.inGameHasFocus && minecraft.gameSettings.keyBindTogglePerspective != Keybindings.boatperspective)
         {
             LogHelper.info("Switching");
             //If so, save the original and change to the dummy one
@@ -69,10 +69,13 @@ public class EntityCamera extends EntityLivingBase
     private void revertPerspectiveKey()
     {
         //Set keybind back to normal
-        LogHelper.info("Switching Back");
-        minecraft.gameSettings.keyBindTogglePerspective = original;
-        // Keybindings.boatperspective.setKeyCode(original.getKeyCode()); //Seems to cause problems when set to the same
-        KeyBinding.unPressAllKeys();
+        if(minecraft.gameSettings.keyBindTogglePerspective == Keybindings.boatperspective)
+        {
+            LogHelper.info("Switching Back");
+            minecraft.gameSettings.keyBindTogglePerspective = original;
+            // Keybindings.boatperspective.setKeyCode(original.getKeyCode()); //Seems to cause problems when set to the same
+            KeyBinding.unPressAllKeys();
+        }
     }
 
     //This function shifts player yaw by 360 until its within 360 of boat yaw

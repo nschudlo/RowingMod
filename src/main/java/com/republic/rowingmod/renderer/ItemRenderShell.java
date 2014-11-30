@@ -5,6 +5,7 @@ import com.republic.rowingmod.model.ModelRowingShell;
 import com.republic.rowingmod.reference.Names;
 import com.republic.rowingmod.reference.Reference;
 import com.republic.rowingmod.utility.LogHelper;
+import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.entity.EntityClientPlayerMP;
 import net.minecraft.entity.Entity;

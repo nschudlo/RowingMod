@@ -48,7 +48,7 @@ public class EntityRowingShell extends EntityRowMod
     private float rightHeight;
     private float rightRotation;
 
-    private boolean leftOarDown, rightOarDown, holdWater;
+    //private boolean leftOarDown, rightOarDown, holdWater;
 
     @SideOnly(Side.CLIENT)
     Minecraft minecraft;
@@ -79,7 +79,7 @@ public class EntityRowingShell extends EntityRowMod
         rightHeight=-0.139623F;
         rightRotation=0.0f;
 
-        leftOarDown=rightOarDown=holdWater=false;
+        //leftOarDown=rightOarDown=holdWater=false;
 
         leftPower = rightPower = leftSpeed = rightSpeed = 0.0f;
 
@@ -116,6 +116,10 @@ public class EntityRowingShell extends EntityRowMod
         this.dataWatcher.addObject(21, new Float(0.0F));//left height
         this.dataWatcher.addObject(22, new Float(0.0F));//right rotation
         this.dataWatcher.addObject(23, new Float(0.0F));//right height
+
+        this.dataWatcher.addObject(24, new Integer(0));//left down
+        this.dataWatcher.addObject(25, new Integer(0));//right down
+        this.dataWatcher.addObject(26, new Integer(0));//forward down
 
     }
 
@@ -268,18 +272,22 @@ public class EntityRowingShell extends EntityRowMod
 
     public void setOarData(boolean leftOar, boolean rightOar, boolean holdWater)
     {
-        this.leftOarDown = leftOar;
+      /*  this.leftOarDown = leftOar;
         this.rightOarDown = rightOar;
         this.holdWater = holdWater;
+*/
+        this.setLeftOarDown(leftOar);
+        this.setRightOarDown(rightOar);
+        this.setHoldWaterDown(holdWater);
     }
 
 
 
     public void upDateOars()
     {
-        if(!this.holdWater)
+        if(!this.getHoldWaterDown())
         {
-            if (this.rightOarDown) {
+            if (this.getRightOarDown()) {
                 if (leftRotation < 1.20F)
                     leftRotation += 0.05F;
 
@@ -302,7 +310,7 @@ public class EntityRowingShell extends EntityRowMod
                     leftHeight = -0.139623F;
             }
 
-            if (this.leftOarDown) {
+            if (this.getLeftOarDown()) {
                 if (rightRotation < 1.20F)
                     rightRotation += 0.05F;
 
@@ -358,7 +366,8 @@ public class EntityRowingShell extends EntityRowMod
     public void clientTasks()
     {
         final Minecraft minecraft = Minecraft.getMinecraft();
-        if(this.riddenByEntity != null)
+
+        if(this.riddenByEntity != null)//If someone is in the boat
         {
             final EntityPlayer rider = (EntityPlayer)this.riddenByEntity;
 
@@ -371,25 +380,32 @@ public class EntityRowingShell extends EntityRowMod
                 boolean rightDown = Keyboard.isKeyDown(minecraft.gameSettings.keyBindRight.getKeyCode());
                 boolean forwardDown = Keyboard.isKeyDown(minecraft.gameSettings.keyBindForward.getKeyCode());
 
-                if(minecraft.inGameHasFocus)//This prevents the ability to row while in guis and chatting...
-                    PacketHandler.INSTANCE.sendToServer(new MessageOarKeyPressed(this.getEntityId(), leftDown, rightDown, forwardDown));
+                //If any changes send an update
+                if(leftDown != this.getLeftOarDown() || rightDown != this.getRightOarDown() || forwardDown != this.getHoldWaterDown())
+                    if(minecraft.inGameHasFocus)//This prevents the ability to row while in guis and chatting...
+                    {
+                        PacketHandler.INSTANCE.sendToServer(new MessageOarKeyPressed(this.getEntityId(), leftDown, rightDown, forwardDown));
+                        this.setLeftOarDown(leftDown);
+                        this.setRightOarDown(rightDown);
+                        this.setHoldWaterDown(forwardDown);
+                    }
             }
 
             if (camera == null) {
-               camera = new EntityCamera(this.worldObj, this);
-               worldObj.spawnEntityInWorld(camera);
-              }
+                camera = new EntityCamera(this.worldObj, this);
+                worldObj.spawnEntityInWorld(camera);
+            }
 
-               if(minecraft.gameSettings.thirdPersonView==0)
-                  minecraft.renderViewEntity = minecraft.thePlayer;
+            if(minecraft.gameSettings.thirdPersonView==0)
+                minecraft.renderViewEntity = minecraft.thePlayer;
             else
-               minecraft.renderViewEntity = camera;
+                minecraft.renderViewEntity = camera;
 
         }
-        else
+        else //If boat has no one riding, return render view back to default
         {
-               minecraft.renderViewEntity = minecraft.thePlayer;
-                camera = null;
+            minecraft.renderViewEntity = minecraft.thePlayer;
+            camera = null;
         }
     }
 
@@ -403,16 +419,13 @@ public class EntityRowingShell extends EntityRowMod
 
         if(this.worldObj.isRemote) //Client side
         {
-
             clientTasks();
-
-
         }
         else //Server Side
         {
-            upDateOars();
-        }
 
+        }
+        upDateOars();
 
 
         if (this.getTimeSinceHit() > 0)
@@ -494,7 +507,7 @@ public class EntityRowingShell extends EntityRowMod
 
                 this.setPosition(x, y, z);
 
-                //Commented this out because all it does is modulo to 360;
+                //Commented this out. all it does is modulo to 360;
                 //this.setRotation(this.rotationYaw, this.rotationPitch);
             }
             else
@@ -611,7 +624,7 @@ public class EntityRowingShell extends EntityRowMod
                 this.motionZ *= 0.5D;
             }
 
-            if(this.holdWater)
+            if(this.getHoldWaterDown())
             {
                 this.motionX *= 0.9D;
                 this.motionY *= 0.5D;
@@ -862,6 +875,36 @@ public class EntityRowingShell extends EntityRowMod
     public float getRightHeight()
     {
         return this.dataWatcher.getWatchableObjectFloat(23);
+    }
+
+    public boolean getLeftOarDown()
+    {
+        return this.dataWatcher.getWatchableObjectInt(24) ==1 ? true: false;
+    }
+
+    public boolean getRightOarDown()
+    {
+        return this.dataWatcher.getWatchableObjectInt(25) ==1 ? true: false;
+    }
+
+    public boolean getHoldWaterDown()
+    {
+        return this.dataWatcher.getWatchableObjectInt(26) ==1 ? true: false;
+    }
+
+    public void setLeftOarDown(boolean value)
+    {
+        this.dataWatcher.updateObject(24, value ? 1: 0);
+    }
+
+    public void setRightOarDown(boolean value)
+    {
+        this.dataWatcher.updateObject(25, value ? 1: 0);
+    }
+
+    public void setHoldWaterDown(boolean value)
+    {
+        this.dataWatcher.updateObject(26, value ? 1: 0);
     }
 
     /**
