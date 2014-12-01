@@ -1,6 +1,8 @@
 package com.republic.rowingmod.entity;
 
 
+import com.google.common.eventbus.Subscribe;
+import com.republic.rowingmod.utility.LogHelper;
 import com.republic.rowingmod.utility.network.MessageOarKeyPressed;
 import com.republic.rowingmod.utility.network.PacketHandler;
 import cpw.mods.fml.relauncher.Side;
@@ -8,6 +10,7 @@ import cpw.mods.fml.relauncher.SideOnly;
 import net.minecraft.block.Block;
 import net.minecraft.block.material.Material;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.entity.RenderPlayer;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.player.EntityPlayer;
@@ -20,6 +23,7 @@ import net.minecraft.util.AxisAlignedBB;
 import net.minecraft.util.DamageSource;
 import net.minecraft.util.MathHelper;
 import net.minecraft.world.World;
+import net.minecraftforge.client.event.RenderPlayerEvent;
 import org.lwjgl.input.Keyboard;
 
 import java.util.List;
@@ -287,19 +291,22 @@ public class EntityRowingShell extends EntityRowMod
     {
         if(!this.getHoldWaterDown())
         {
-            if (this.getRightOarDown()) {
+            if (this.getRightOarDown()) //Recovery-speed goes down
+            {
                 if (leftRotation < 1.20F)
                     leftRotation += 0.05F;
 
                 if (leftHeight < 0.0F)
                     leftHeight += 0.05F;
-            } else {
+            }
+            else //Drive-speed goes up
+            {
                 if (leftRotation > 0) {
                     leftRotation -= 0.05F;
                     leftSpeed += leftRotation;
                 } else {
                     if (leftSpeed > 0)
-                        leftSpeed -= 0.8;
+                        leftSpeed *= 0.8;
                     else
                         leftSpeed = 0;
                 }
@@ -310,19 +317,22 @@ public class EntityRowingShell extends EntityRowMod
                     leftHeight = -0.139623F;
             }
 
-            if (this.getLeftOarDown()) {
+            if (this.getLeftOarDown())//Recovery-speed goes down
+            {
                 if (rightRotation < 1.20F)
                     rightRotation += 0.05F;
 
                 if (rightHeight < 0.0F)
                     rightHeight += 0.05F;
-            } else {
+            }
+            else //Drive-speed goes up
+            {
                 if (rightRotation > 0) {
                     rightRotation -= 0.05F;
                     rightSpeed += rightRotation;
                 } else {
                     if (rightSpeed > 0)
-                        rightSpeed -= 0.8;
+                        rightSpeed *= 0.8;
                     else
                         rightSpeed = 0;
                 }
@@ -332,7 +342,8 @@ public class EntityRowingShell extends EntityRowMod
                     rightHeight = -0.139623F;
             }
         }
-        else {
+        else //Hold water!!
+        {
             if (leftHeight > -0.15F)
                 leftHeight -= 0.05F;
             if (rightHeight > -0.15F)
@@ -353,6 +364,7 @@ public class EntityRowingShell extends EntityRowMod
             rightSpeed = 0;
 
         }
+
         this.dataWatcher.updateObject(20, leftRotation);
         this.dataWatcher.updateObject(21, leftHeight);
         this.dataWatcher.updateObject(22, rightRotation);
@@ -456,6 +468,7 @@ public class EntityRowingShell extends EntityRowMod
             }
         }
 
+        //d10 is horizontal movement vector
         double d10 = Math.sqrt(this.motionX * this.motionX + this.motionZ * this.motionZ);
         double x;
         double y;
@@ -493,7 +506,7 @@ public class EntityRowingShell extends EntityRowMod
         double z;
         double d12;
 
-        if (this.worldObj.isRemote && this.isBoatEmpty)
+        if (this.worldObj.isRemote && this.isBoatEmpty) //Client and the boat is empty
         {
             if (this.boatPosRotationIncrements > 0)
             {
@@ -527,11 +540,15 @@ public class EntityRowingShell extends EntityRowMod
                 this.motionX *= 0.9900000095367432D;
                 this.motionY *= 0.949999988079071D;
                 this.motionZ *= 0.9900000095367432D;
-            }
-        }
-        else
-        {
 
+
+            }
+            this.motionX = 0;
+            this.motionY = 0;
+            this.motionZ = 0;
+        }
+        else//Server and client
+        {
 
 
             if (d0 < 1.0D)
@@ -558,8 +575,6 @@ public class EntityRowingShell extends EntityRowMod
 
                 this.motionX += -Math.sin((double) (f * (float) Math.PI / 180.0F)) * this.speedMultiplier * -leftSpeed/*(double)entitylivingbase.moveForward*/ * 0.05000000074505806D;
                 this.motionZ += Math.cos((double) (f * (float) Math.PI / 180.0F)) * this.speedMultiplier * -leftSpeed/*(double)entitylivingbase.moveForward*/ * 0.05000000074505806D;
-
-
 
             }
 
@@ -592,8 +607,17 @@ public class EntityRowingShell extends EntityRowMod
                 }
             }
 
-            int l;
+            float leftSpin = leftSpeed > 2.0f ? 2.0f : leftSpeed;
+            float rightSpin = rightSpeed > 2.0f ? 2.0f : rightSpeed;
+            this.rotationYaw += (leftSpin - rightSpin);
+         //   LogHelper.info(this.leftSpeed + " " + this.rightSpeed + " " + this.rotationYaw);
 
+            //this.posX += this.leftSpeed*0.01;
+           // this.posZ += this.rightSpeed*0.01;
+
+
+            //Does work with snow layers and water lilies
+            int l;
             for (l = 0; l < 4; ++l)
             {
                 int i1 = MathHelper.floor_double(this.posX + ((double)(l % 2) - 0.5D) * 0.8D);
@@ -617,6 +641,7 @@ public class EntityRowingShell extends EntityRowMod
                 }
             }
 
+            //Slows the boat down if on land
             if (this.onGround)
             {
                 this.motionX *= 0.5D;
@@ -624,6 +649,7 @@ public class EntityRowingShell extends EntityRowMod
                 this.motionZ *= 0.5D;
             }
 
+            //Slows the boat down if holding water
             if(this.getHoldWaterDown())
             {
                 this.motionX *= 0.9D;
@@ -633,11 +659,11 @@ public class EntityRowingShell extends EntityRowMod
 
             this.moveEntity(this.motionX, this.motionY, this.motionZ);
 
+            //Check if the boat is colliding with something and if the horizontal movement vector is fast enough
             if (this.isCollidedHorizontally && d10 > 0.2D)
             {
                 if (!this.worldObj.isRemote && !this.isDead)
                 {
-
                     this.setDead();
 
                     for (l = 0; l < 3; ++l)
@@ -651,18 +677,20 @@ public class EntityRowingShell extends EntityRowMod
                     }
                 }
             }
-            else
+            else //Otherwise slow it down
             {
                 this.motionX *= 0.9900000095367432D;
                 this.motionY *= 0.949999988079071D;
                 this.motionZ *= 0.9900000095367432D;
             }
 
+
             this.rotationPitch = 0.0F;
             y = (double)this.rotationYaw;
             z = this.prevPosX - this.posX;
             d12 = this.prevPosZ - this.posZ;
 
+           // No idea?
             if (z * z + d12 * d12 > 0.001D)
             {
                 y = (double)((float)(Math.atan2(d12, z) * 180.0D / Math.PI));
@@ -680,13 +708,15 @@ public class EntityRowingShell extends EntityRowMod
                 d7 = -20.0D;
             }
 
-            this.rotationYaw = (float)((double)this.rotationYaw + d7);
+//            this.rotationYaw = (float)((double)this.rotationYaw + d7);
 
-            EntityLivingBase rider = (EntityLivingBase)this.riddenByEntity;
+//            EntityLivingBase rider = (EntityLivingBase)this.riddenByEntity;
+
+
             //Added this to keep boat aligned with rider
-            if(this.riddenByEntity != null)
+    //        if(this.riddenByEntity != null)
             {
-                this.rotationYaw = this.riddenByEntity.rotationYaw-90.0f;
+     //           this.rotationYaw = this.riddenByEntity.rotationYaw-90.0f;
                 // this.setRotation(rider.rotationYaw-90f, this.rotationPitch);
             }
 
@@ -719,6 +749,7 @@ public class EntityRowingShell extends EntityRowMod
         }
 
     }
+
 
     public void updateRiderPosition()
     {

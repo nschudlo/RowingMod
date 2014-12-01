@@ -1,7 +1,9 @@
 package com.republic.rowingmod;
 
+import com.republic.rowingmod.entity.EntityRowingShell;
 import com.republic.rowingmod.init.ModEntities;
 import com.republic.rowingmod.init.ModItems;
+import com.republic.rowingmod.init.RowingModEventHandler;
 import com.republic.rowingmod.proxy.IProxy;
 import com.republic.rowingmod.reference.Reference;
 import com.republic.rowingmod.utility.network.PacketHandler;
@@ -10,6 +12,7 @@ import cpw.mods.fml.common.SidedProxy;
 import cpw.mods.fml.common.event.FMLInitializationEvent;
 import cpw.mods.fml.common.event.FMLPostInitializationEvent;
 import cpw.mods.fml.common.event.FMLPreInitializationEvent;
+import net.minecraftforge.common.MinecraftForge;
 
 @Mod(modid= Reference.MOD_ID, name=Reference.MOD_NAME, version=Reference.VERSION)
 public class RowingMod
@@ -29,6 +32,8 @@ public class RowingMod
 
         proxy.registerRenderers();
         proxy.registerKeyBindings();
+
+        MinecraftForge.EVENT_BUS.register(new RowingModEventHandler());
     }
 
     @Mod.EventHandler
