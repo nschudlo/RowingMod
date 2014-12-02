@@ -4,9 +4,11 @@ import com.republic.rowingmod.entity.EntityRowingShell;
 import com.republic.rowingmod.model.ModelRowingShell;
 import com.republic.rowingmod.reference.Names;
 import com.republic.rowingmod.reference.Reference;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.entity.Render;
 import net.minecraft.entity.Entity;
 import net.minecraft.util.ResourceLocation;
+import net.minecraft.world.World;
 import org.lwjgl.opengl.GL11;
 
 public class RendererRowingShell extends Render
@@ -26,7 +28,7 @@ public class RendererRowingShell extends Render
     public void doRender(Entity entity, double x, double y, double z, float f, float something)
     {
         EntityRowingShell rowingShell = (EntityRowingShell) entity;
-     //   float[] oarData = {0.0f,0.0f,0.0f,0.0f};
+
         float[] oarData = rowingShell.getOarData();
         this.shellModel.setOars(oarData[0],oarData[1],oarData[2],oarData[3]);
 
@@ -42,6 +44,12 @@ public class RendererRowingShell extends Render
         this.shellModel.render(entity, 0.0f,0.0f,0.0f,0.0f,0.0f,0.0625f);
 
         GL11.glPopMatrix();
+
+        for(int rad=2; rad < 20; rad++) {
+            float goalZ = (float) (rowingShell.posZ + rad * Math.cos(Math.toRadians(rowingShell.getFacingDirection() + 0)));
+            float goalX = (float) (rowingShell.posX + rad * Math.sin(Math.toRadians(rowingShell.getFacingDirection() + 0)));
+            Minecraft.getMinecraft().theWorld.spawnParticle("reddust", goalX, 19, goalZ, 0, 0, 0);
+        }
     }
 
     @Override

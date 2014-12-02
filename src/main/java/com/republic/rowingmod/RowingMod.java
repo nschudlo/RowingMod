@@ -12,6 +12,7 @@ import cpw.mods.fml.common.SidedProxy;
 import cpw.mods.fml.common.event.FMLInitializationEvent;
 import cpw.mods.fml.common.event.FMLPostInitializationEvent;
 import cpw.mods.fml.common.event.FMLPreInitializationEvent;
+import net.minecraft.client.Minecraft;
 import net.minecraftforge.common.MinecraftForge;
 
 @Mod(modid= Reference.MOD_ID, name=Reference.MOD_NAME, version=Reference.VERSION)
@@ -26,7 +27,6 @@ public class RowingMod
     @Mod.EventHandler
     public void preInit(FMLPreInitializationEvent event)
     {
-
         ModItems.init();
         ModEntities.init();
 

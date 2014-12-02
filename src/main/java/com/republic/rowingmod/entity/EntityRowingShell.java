@@ -5,6 +5,7 @@ import com.google.common.eventbus.Subscribe;
 import com.republic.rowingmod.utility.LogHelper;
 import com.republic.rowingmod.utility.network.MessageOarKeyPressed;
 import com.republic.rowingmod.utility.network.PacketHandler;
+import cpw.mods.fml.common.eventhandler.SubscribeEvent;
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
 import net.minecraft.block.Block;
@@ -20,11 +21,14 @@ import net.minecraft.item.Item;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.util.AxisAlignedBB;
+import net.minecraft.util.ChatComponentText;
 import net.minecraft.util.DamageSource;
 import net.minecraft.util.MathHelper;
 import net.minecraft.world.World;
+import net.minecraftforge.client.event.RenderGameOverlayEvent;
 import net.minecraftforge.client.event.RenderPlayerEvent;
 import org.lwjgl.input.Keyboard;
+import scala.Int;
 
 import java.util.List;
 
@@ -51,6 +55,8 @@ public class EntityRowingShell extends EntityRowMod
     private float leftRotation;
     private float rightHeight;
     private float rightRotation;
+
+    private float speed;
 
     //private boolean leftOarDown, rightOarDown, holdWater;
 
@@ -83,9 +89,8 @@ public class EntityRowingShell extends EntityRowMod
         rightHeight=-0.139623F;
         rightRotation=0.0f;
 
-        //leftOarDown=rightOarDown=holdWater=false;
-
         leftPower = rightPower = leftSpeed = rightSpeed = 0.0f;
+        speed = 0f;
 
     }
 
@@ -291,7 +296,7 @@ public class EntityRowingShell extends EntityRowMod
     {
         if(!this.getHoldWaterDown())
         {
-            if (this.getRightOarDown()) //Recovery-speed goes down
+            if (this.getRightOarDown()) //Recovery
             {
                 if (leftRotation < 1.20F)
                     leftRotation += 0.05F;
@@ -299,16 +304,11 @@ public class EntityRowingShell extends EntityRowMod
                 if (leftHeight < 0.0F)
                     leftHeight += 0.05F;
             }
-            else //Drive-speed goes up
+            else //Drive
             {
                 if (leftRotation > 0) {
                     leftRotation -= 0.05F;
-                    leftSpeed += leftRotation;
-                } else {
-                    if (leftSpeed > 0)
-                        leftSpeed *= 0.8;
-                    else
-                        leftSpeed = 0;
+                    leftSpeed += 1.2-leftRotation;
                 }
 
                 if (leftHeight > -0.139623F)
@@ -317,7 +317,13 @@ public class EntityRowingShell extends EntityRowMod
                     leftHeight = -0.139623F;
             }
 
-            if (this.getLeftOarDown())//Recovery-speed goes down
+            //Drop Left Speed every time
+            if (leftSpeed > 0)
+                leftSpeed *= 0.95;
+            else
+                leftSpeed = 0;
+
+            if (this.getLeftOarDown())//Recovery
             {
                 if (rightRotation < 1.20F)
                     rightRotation += 0.05F;
@@ -325,22 +331,26 @@ public class EntityRowingShell extends EntityRowMod
                 if (rightHeight < 0.0F)
                     rightHeight += 0.05F;
             }
-            else //Drive-speed goes up
+            else //Drive
             {
+                //Rotate back to neutral
                 if (rightRotation > 0) {
                     rightRotation -= 0.05F;
-                    rightSpeed += rightRotation;
-                } else {
-                    if (rightSpeed > 0)
-                        rightSpeed *= 0.8;
-                    else
-                        rightSpeed = 0;
+                    rightSpeed += 1.2-rightRotation;
                 }
+
+                //Place blade in the water
                 if (rightHeight > -0.139623F)
                     rightHeight -= 0.05F;
                 else
                     rightHeight = -0.139623F;
             }
+
+            //Drop right speed every time
+            if (rightSpeed > 0)
+                rightSpeed *= 0.95;
+            else
+                rightSpeed = 0;
         }
         else //Hold water!!
         {
@@ -351,19 +361,21 @@ public class EntityRowingShell extends EntityRowMod
 
 
             if (leftSpeed > 0)
-                leftSpeed -= 1;
+                leftSpeed *= 0.9;
             else
                 leftSpeed = 0;
 
             if (rightSpeed > 0)
-                rightSpeed -= 1;
+                rightSpeed *= 0.9;
             else
                 rightSpeed = 0;
 
-            leftSpeed = 0;
-            rightSpeed = 0;
-
         }
+
+        if(leftSpeed < 0.1)
+            leftSpeed = 0;
+        if(rightSpeed < 0.1)
+            rightSpeed = 0;
 
         this.dataWatcher.updateObject(20, leftRotation);
         this.dataWatcher.updateObject(21, leftHeight);
@@ -420,6 +432,8 @@ public class EntityRowingShell extends EntityRowMod
             camera = null;
         }
     }
+
+
 
     /**
      * Called to update the entity's position/logic.
@@ -506,8 +520,9 @@ public class EntityRowingShell extends EntityRowMod
         double z;
         double d12;
 
-        if (this.worldObj.isRemote && this.isBoatEmpty) //Client and the boat is empty
+        if (this.worldObj.isRemote && this.riddenByEntity == null)// isBoatEmpty) //Client and the boat is empty
         {
+            LogHelper.info("GGG");
             if (this.boatPosRotationIncrements > 0)
             {
                 x = this.posX + (this.boatX - this.posX) / (double)this.boatPosRotationIncrements;
@@ -550,7 +565,6 @@ public class EntityRowingShell extends EntityRowMod
         else//Server and client
         {
 
-
             if (d0 < 1.0D)
             {
                 x = d0 * 2.0D - 1.0D;
@@ -570,13 +584,25 @@ public class EntityRowingShell extends EntityRowMod
             {
                 //EntityLivingBase entitylivingbase = (EntityLivingBase)this.riddenByEntity;
                 //float f = this.riddenByEntity.rotationYaw;// + -entitylivingbase.moveStrafing * 90.0F;
-                float f = this.rotationYaw+90;
+                //float f = this.rotationYaw+90;
+                float f = this.getFacingDirection();
 
 
-                this.motionX += -Math.sin((double) (f * (float) Math.PI / 180.0F)) * this.speedMultiplier * -leftSpeed/*(double)entitylivingbase.moveForward*/ * 0.05000000074505806D;
-                this.motionZ += Math.cos((double) (f * (float) Math.PI / 180.0F)) * this.speedMultiplier * -leftSpeed/*(double)entitylivingbase.moveForward*/ * 0.05000000074505806D;
+                // this.motionX += -Math.sin((double) (-f * (float) Math.PI / 180.0F)) * this.speedMultiplier * -leftSpeed/*(double)entitylivingbase.moveForward*/ * 0.05000000074505806D;
+                //this.motionZ += Math.cos((double) (-f * (float) Math.PI / 180.0F)) * this.speedMultiplier * -leftSpeed/*(double)entitylivingbase.moveForward*/ * 0.05000000074505806D;
+
 
             }
+
+            float leftSpin = leftSpeed > 1.0f ? 1.0f : leftSpeed;
+            float rightSpin = rightSpeed > 1.0f ? 1.0f : rightSpeed;
+            this.rotationYaw += (leftSpin - rightSpin);
+
+            this.speed = (leftSpeed + rightSpeed);
+
+            this.motionZ = (float) ((-this.speed/5) * Math.cos(Math.toRadians(this.getFacingDirection() + 0)));
+            this.motionX = (float) ((-this.speed/5) * Math.sin(Math.toRadians(this.getFacingDirection() + 0)));
+
 
             x = Math.sqrt(this.motionX * this.motionX + this.motionZ * this.motionZ);
 
@@ -607,13 +633,11 @@ public class EntityRowingShell extends EntityRowMod
                 }
             }
 
-            float leftSpin = leftSpeed > 2.0f ? 2.0f : leftSpeed;
-            float rightSpin = rightSpeed > 2.0f ? 2.0f : rightSpeed;
-            this.rotationYaw += (leftSpin - rightSpin);
-         //   LogHelper.info(this.leftSpeed + " " + this.rightSpeed + " " + this.rotationYaw);
+
+            //   LogHelper.info(this.leftSpeed + " " + this.rightSpeed + " " + this.rotationYaw);
 
             //this.posX += this.leftSpeed*0.01;
-           // this.posZ += this.rightSpeed*0.01;
+            // this.posZ += this.rightSpeed*0.01;
 
 
             //Does work with snow layers and water lilies
@@ -650,13 +674,13 @@ public class EntityRowingShell extends EntityRowMod
             }
 
             //Slows the boat down if holding water
-            if(this.getHoldWaterDown())
+         /*   if(this.getHoldWaterDown())
             {
-                this.motionX *= 0.9D;
+                this.motionX *= 0.95D;
                 this.motionY *= 0.5D;
-                this.motionZ *= 0.9D;
+                this.motionZ *= 0.95D;
             }
-
+*/
             this.moveEntity(this.motionX, this.motionY, this.motionZ);
 
             //Check if the boat is colliding with something and if the horizontal movement vector is fast enough
@@ -690,7 +714,7 @@ public class EntityRowingShell extends EntityRowMod
             z = this.prevPosX - this.posX;
             d12 = this.prevPosZ - this.posZ;
 
-           // No idea?
+            // No idea?
             if (z * z + d12 * d12 > 0.001D)
             {
                 y = (double)((float)(Math.atan2(d12, z) * 180.0D / Math.PI));
@@ -714,9 +738,9 @@ public class EntityRowingShell extends EntityRowMod
 
 
             //Added this to keep boat aligned with rider
-    //        if(this.riddenByEntity != null)
+            //        if(this.riddenByEntity != null)
             {
-     //           this.rotationYaw = this.riddenByEntity.rotationYaw-90.0f;
+                //           this.rotationYaw = this.riddenByEntity.rotationYaw-90.0f;
                 // this.setRotation(rider.rotationYaw-90f, this.rotationPitch);
             }
 
@@ -961,6 +985,12 @@ public class EntityRowingShell extends EntityRowMod
         //This calculation maps Minecraft0 to Regular0, Minecraft-90 to Regular90, Minecraft90 to Regular270
         //The Minecraft plane uses Z+ at 0 and X+ at 90
         return (360 - (this.rotationYaw+90)) %360;
+    }
+
+    public float[] getSpeed()
+    {
+        float[] sp = {this.leftSpeed, this.rightSpeed, this.speed};
+        return sp;
     }
 
 }
